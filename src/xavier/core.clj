@@ -20,3 +20,50 @@
 
 (defn demo []
   (-> "hello how are you??" encrypt decrypt))
+
+
+;; lei dorme -> she sleeps
+
+(def question-response
+  {:question "she sleeps"
+   :encrypted (encrypt (str {:targets "[lei dorme]"
+                             :score 0}))})
+
+(defn increment-score [encrypted]
+  (let [decrypted (-> encrypted decrypt read-string)]
+    (-> decrypted
+        (merge {:score (-> decrypted :score inc)})
+        str
+        encrypt)))
+
+(defn decrement-score [encrypted]
+  (let [decrypted (-> encrypted decrypt read-string)]
+    (-> decrypted
+        (merge {:score (-> decrypted :score dec)})
+        str
+        encrypt)))
+
+(def encrypted (-> question-response :encrypted))
+
+(def requests-and-responses
+  (concat
+   [[
+     {:keystroke "l"
+      :encrypted encrypted}
+     {:correct-prefix "l"
+      :encrypted (increment-score encrypted)}]]
+
+   (let [encrypted (increment-score encrypted)]
+     (concat
+      [[
+        {:keystroke "le"
+         :encrypted encrypted}
+        {:correct-prefix "le"
+         :encrypted (increment-score encrypted)}]]
+
+      (let [encrypted (increment-score encrypted)]
+        [[
+          {:keystroke "lej"
+           :encrypted encrypted}
+          {:correct-prefix "le"
+           :encrypted (decrement-score encrypted)}]])))))
