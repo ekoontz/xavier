@@ -18,3 +18,5 @@
 (defn decrypt [encrypted-input]
   (lock-key/decrypt-from-base64 encrypted-input password))
 
+(defn demo []
+  (-> "hello how are you??" encrypt decrypt))
