@@ -43,27 +43,50 @@
         str
         encrypt)))
 
-(def encrypted (-> question-response :encrypted))
+(def encrypted-0 (-> question-response :encrypted))
+(def encrypted-1 (-> encrypted-0 increment-score))
+(def encrypted-2 (-> encrypted-1 increment-score))
+(def encrypted-3 (-> encrypted-2 decrement-score))
+
+(def rr-pair-1
+  [
+   ;; request 1
+   {:user-input "l"
+    :encrypted encrypted-0}
+   
+   ;; response 1
+   {:correct-prefix "l"
+    :encrypted encrypted-1}])
+
+(def rr-pair-2
+  [
+   ;; request 2
+   {:user-input "le"
+    :encrypted encrypted-1}
+   
+   ;; response 2
+   {:correct-prefix "le"
+    :encrypted encrypted-2}])
+
+(def rr-pair-3
+  [
+   ;; request 3
+   {:user-input "lej"
+    :encrypted encrypted-2}
+   ;; response 3
+   {:correct-prefix "le"
+    :encrypted encrypted-3}])
 
 (def requests-and-responses
-  (concat
-   [[
-     {:keystroke "l"
-      :encrypted encrypted}
-     {:correct-prefix "l"
-      :encrypted (increment-score encrypted)}]]
+  [rr-pair-1 rr-pair-2 rr-pair-3])
 
-   (let [encrypted (increment-score encrypted)]
-     (concat
-      [[
-        {:keystroke "le"
-         :encrypted encrypted}
-        {:correct-prefix "le"
-         :encrypted (increment-score encrypted)}]]
-
-      (let [encrypted (increment-score encrypted)]
-        [[
-          {:keystroke "lej"
-           :encrypted encrypted}
-          {:correct-prefix "le"
-           :encrypted (decrement-score encrypted)}]])))))
+(defn evaluate [user-input targets current-score]
+  ;; if user-input is a prefix of any of the targets, increment score; otherwise, decrement score
+  (if (seq (remove false? (map (fn [target]
+                                 (if (clojure.string/starts-with? target user-input)
+                                   user-input false))
+                               targets)))
+    {:score (inc current-score)
+     :correct-prefix user-input}
+    {:score (dec current-score)
+     :correct-prefix (->> user-input butlast (clojure.string/join ""))}))
