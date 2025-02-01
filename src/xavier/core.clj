@@ -37,24 +37,8 @@
       (dissoc :targets)
       (merge {:encrypted (encrypt (str question-and-answer-structure))})))
 
-(defn increment-score [encrypted]
-  (let [decrypted (-> encrypted decrypt read-string)]
-    (-> decrypted
-        (merge {:score (-> decrypted :score inc)}))))
-
-(defn decrement-score [encrypted]
-  (let [decrypted (-> encrypted decrypt read-string)]
-    (-> decrypted
-        (merge {:score (-> decrypted :score dec)}))))
-
-(def encrypted-0 (-> question-response :encrypted))
-(def encrypted-1 (-> encrypted-0 increment-score str encrypt))
-(def encrypted-2 (-> encrypted-1 increment-score str encrypt))
-(def encrypted-3 (-> encrypted-2 decrement-score str encrypt))
-
 (defn evaluate [user-input targets current-score]
   ;; if user-input is a prefix of any of the targets, increment score; otherwise, decrement score.
-
   (let [correct-prefixes
         (->>
          (remove false? (map (fn [target]
@@ -63,9 +47,13 @@
                              targets))
          (sort (fn [a b] (> (count a) (count b)))))]
     (merge {:targets targets}
+
+           ;; if user-input is a prefix of any of the targets, increment score:
            (if (seq correct-prefixes)
              {:score (inc current-score)
               :correct-prefix (first correct-prefixes)}
+
+             ;; otherwise, decrement score:
              {:score (dec current-score)
               :correct-prefix (->> user-input butlast (clojure.string/join ""))}))))
 
@@ -90,7 +78,7 @@
         (dissoc :targets))))
 
 (def initial-rr
-  [{:http-request "GET /question/751"}
+  ["GET /question/751"
    question-response])
 
 (def rr-pair-1
@@ -136,4 +124,9 @@
      (server-response user-request)]))
 
 (def requests-and-responses
-  [initial-rr rr-pair-1 rr-pair-2 rr-pair-3 rr-pair-4 rr-pair-5 rr-pair-6])
+  (->>
+   [initial-rr rr-pair-1 rr-pair-2 rr-pair-3 rr-pair-4 rr-pair-5 rr-pair-6]
+   (map (fn [x]
+          {:request (first x)
+           :response (second x)}))))
+
