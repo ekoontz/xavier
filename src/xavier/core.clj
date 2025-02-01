@@ -24,29 +24,47 @@
 
 ;; lei dorme -> she sleeps
 
+(def question-and-answer-structure
+  ;; when the user GETs /question/751, they get back:
+  {:question-id 42
+   :question "she sleeps"
+   :targets "[lei dorme]"
+   :correct-prefix ""
+   :score 0})
+
 (def question-response
-  {:question "she sleeps"
-   :encrypted (encrypt (str {:targets "[lei dorme]"
-                             :score 0}))})
+  (-> question-and-answer-structure
+      (dissoc :targets)
+      (merge {:encrypted (encrypt (str question-and-answer-structure))})))
 
 (defn increment-score [encrypted]
   (let [decrypted (-> encrypted decrypt read-string)]
     (-> decrypted
-        (merge {:score (-> decrypted :score inc)})
-        str
-        encrypt)))
+        (merge {:score (-> decrypted :score inc)}))))
 
 (defn decrement-score [encrypted]
   (let [decrypted (-> encrypted decrypt read-string)]
     (-> decrypted
-        (merge {:score (-> decrypted :score dec)})
-        str
-        encrypt)))
+        (merge {:score (-> decrypted :score dec)}))))
 
 (def encrypted-0 (-> question-response :encrypted))
-(def encrypted-1 (-> encrypted-0 increment-score))
-(def encrypted-2 (-> encrypted-1 increment-score))
-(def encrypted-3 (-> encrypted-2 decrement-score))
+(def encrypted-1 (-> encrypted-0 increment-score str encrypt))
+(def encrypted-2 (-> encrypted-1 increment-score str encrypt))
+(def encrypted-3 (-> encrypted-2 decrement-score str encrypt))
+
+(defn evaluate [user-input targets current-score]
+  ;; if user-input is a prefix of any of the targets, increment score; otherwise, decrement score.
+
+
+  (merge {:targets targets}
+         (if (seq (remove false? (map (fn [target]
+                                        (if (clojure.string/starts-with? target user-input)
+                                          user-input false))
+                                      targets)))
+           {:score (inc current-score)
+            :correct-prefix user-input}
+           {:score (dec current-score)
+            :correct-prefix (->> user-input butlast (clojure.string/join ""))})))
 
 (def rr-pair-1
   [
@@ -55,14 +73,15 @@
     :encrypted encrypted-0}
    
    ;; response 1
-   {:correct-prefix "l"
-    :encrypted encrypted-1}])
+   (merge (evaluate "l" ["lei dorme"] 0)
+          {:encrypted (encrypt (str (evaluate "l" ["lei dorme"] 0)))
+           :decrypted (decrypt (encrypt (str (evaluate "l" ["lei dorme"] 0))))})])
 
 (def rr-pair-2
   [
    ;; request 2
    {:user-input "le"
-    :encrypted encrypted-1}
+    :encrypted (-> rr-pair-1 second :encrypted)}
    
    ;; response 2
    {:correct-prefix "le"
@@ -77,16 +96,9 @@
    {:correct-prefix "le"
     :encrypted encrypted-3}])
 
-(def requests-and-responses
-  [rr-pair-1 rr-pair-2 rr-pair-3])
+(def initial-rr
+  [{:http-request "GET /question/751"}
+   question-response])
 
-(defn evaluate [user-input targets current-score]
-  ;; if user-input is a prefix of any of the targets, increment score; otherwise, decrement score
-  (if (seq (remove false? (map (fn [target]
-                                 (if (clojure.string/starts-with? target user-input)
-                                   user-input false))
-                               targets)))
-    {:score (inc current-score)
-     :correct-prefix user-input}
-    {:score (dec current-score)
-     :correct-prefix (->> user-input butlast (clojure.string/join ""))}))
+(def requests-and-responses
+  [initial-rr rr-pair-1 rr-pair-2 rr-pair-3])
