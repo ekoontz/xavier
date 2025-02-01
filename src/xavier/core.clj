@@ -69,8 +69,25 @@
              {:score (dec current-score)
               :correct-prefix (->> user-input butlast (clojure.string/join ""))}))))
 
-(defn server-response [user-input targets score]
-  (evaluate user-input targets score))
+(defn server-response [user-request]
+  (let [
+        ;; 1. get from the user input two params: :user-input and :encrypted
+        {user-input :user-input
+         encrypted :encrypted} user-request
+        
+        ;; 2. decrypt the correct answers and score from the user's :encrypted param:
+        {targets :targets
+         score :score}
+        (-> encrypted decrypt read-string)
+        
+        ;; 3. evaluate the user's input against the correct answers:
+        evaluation (evaluate user-input targets score)]
+    
+    ;; create the response to be sent back to the user:
+    (-> evaluation
+        (merge
+         {:encrypted (-> evaluation str encrypt)})
+        (dissoc :targets))))
 
 (def initial-rr
   [{:http-request "GET /question/751"}
@@ -80,88 +97,43 @@
   (let [user-request
         {:user-input "l"
          :encrypted encrypted-0}]
-    [
-     ;; request 1
-     user-request
-
-     ;; response 1
-     (let [
-           ;; 1. get from the user input two params: :user-input and :encrypted
-           {user-input :user-input
-            encrypted :encrypted} user-request
-
-           ;; 2. decrypt the correct answers and score from the user's :encrypted param:
-           {targets :targets
-            score :score}
-           (-> encrypted decrypt read-string)
-
-           ;; 3. evaluate the user's input against the correct answers:
-           evaluation (evaluate user-input targets score)]
-
-       ;; create the response to be sent back to the user:
-       (-> evaluation
-           (merge
-            {:encrypted (-> evaluation str encrypt)})
-           (dissoc :targets)))]))
+    [user-request
+     (server-response user-request)]))
 
 (def rr-pair-2
   (let [user-request
         {:user-input "le"
          :encrypted (-> rr-pair-1 second :encrypted)}]
-    [
-     ;; request 2
-     user-request
-
-     ;; response 2
-     (let [
-           ;; 1. get from the user input two params: :user-input and :encrypted
-           {user-input :user-input
-            encrypted :encrypted} user-request
-           
-           ;; 2. decrypt the correct answers and score from the user's :encrypted param:
-           {targets :targets
-            score :score}
-           (-> encrypted decrypt read-string)
-
-           ;; 3. evaluate the user's input against the correct answers:
-           evaluation (evaluate user-input targets score)
-           ]
-
-       ;; create the response to be sent back to the user:
-       (-> evaluation
-           (merge
-            {:encrypted (-> evaluation str encrypt)})
-           (dissoc :targets)
-           (merge {:score (-> evaluation :score)})))]))
+    [user-request
+     (server-response user-request)]))
 
 (def rr-pair-3
   (let [user-request
         {:user-input "lej"
          :encrypted (-> rr-pair-2 second :encrypted)}]
-    [
-     ;; request 2
-     user-request
+    [user-request
+     (server-response user-request)]))
 
-     
-     ;; response 2
-     (let [
-           ;; 1. get from the user input two params: :user-input and :encrypted
-           {user-input :user-input
-            encrypted :encrypted} user-request
-           
-           ;; 2. decrypt the correct answers and score from the user's :encrypted param:
-           {targets :targets
-            score :score}
-           (-> encrypted decrypt read-string)
+(def rr-pair-4
+  (let [user-request
+        {:user-input "lei"
+         :encrypted (-> rr-pair-3 second :encrypted)}]
+    [user-request
+     (server-response user-request)]))
 
-           ;; 3. evaluate the user's input against the correct answers:
-           evaluation (evaluate user-input targets score)]
+(def rr-pair-5
+  (let [user-request
+        {:user-input "lei "
+         :encrypted (-> rr-pair-4 second :encrypted)}]
+    [user-request
+     (server-response user-request)]))
 
-       ;; create the response to be sent back to the user:
-       (-> evaluation
-           (merge
-            {:encrypted (-> evaluation str encrypt)})
-           (dissoc :targets)))]))
+(def rr-pair-6
+  (let [user-request
+        {:user-input "lei f"
+         :encrypted (-> rr-pair-5 second :encrypted)}]
+    [user-request
+     (server-response user-request)]))
 
 (def requests-and-responses
-  [initial-rr rr-pair-1 rr-pair-2 rr-pair-3])
+  [initial-rr rr-pair-1 rr-pair-2 rr-pair-3 rr-pair-4 rr-pair-5 rr-pair-6])
