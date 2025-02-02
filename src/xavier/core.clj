@@ -1,14 +1,28 @@
 (ns xavier.core
-  (:require [lock-key.core :as lock-key]))
+  (:require [lock-key.core :as lock-key]
+            [clojure.tools.logging :as log]))
 
 ;; TODO: use environmental variable
 (def password "sUzIbwS6aEq1J0X6mLGh")
+
+(def beginning-of-question 
+  {:question-id 42
+   :question "she sleeps"
+   :targets ["lei dorme"]
+   :correct-prefix ""
+   :score 0})
 
 (defn encrypt [plaintext-input]
   (lock-key/encrypt-as-base64 plaintext-input password))
 
 (defn decrypt [encrypted-input]
-  (lock-key/decrypt-from-base64 encrypted-input password))
+  (try
+    (lock-key/decrypt-from-base64 encrypted-input password)
+    (catch Exception e
+      (do (log/error (str "exception: '" e "' when attempting to decrypt from "
+                          "cyphertext: '" encrypted-input "'. Returning "
+                          "beginning-of-question constant structure."))
+          (str beginning-of-question)))))
 
 (defn evaluate [user-input targets current-score]
   ;; if user-input is a prefix of any of the targets, increment score; otherwise, decrement score.
@@ -57,11 +71,7 @@
 
 (def initial-rr
   ["GET /question/751"
-   (let [q-and-a {:question-id 42
-                  :question "she sleeps"
-                  :targets ["lei dorme"]
-                  :correct-prefix ""
-                  :score 0}]
+   (let [q-and-a beginning-of-question]
      (-> q-and-a
          (dissoc :targets)
          (merge {:encrypted (-> q-and-a str encrypt)})))])
@@ -69,14 +79,14 @@
 (def rr-pair-1
   (let [user-request
         {:user-input "l"
-         :encrypted encrypted-0}]
+         :encrypted (-> initial-rr second :encrypted)}]
     [user-request
      (server-response user-request)]))
 
 (def rr-pair-2
   (let [user-request
         {:user-input "le"
-         :encrypted (-> rr-pair-1 second :encrypted)}]
+         :encrypted (str (-> rr-pair-1 second :encrypted) "")}]
     [user-request
      (server-response user-request)]))
 
